@@ -51,11 +51,12 @@ class ga:
     def run(self):
         #Função na qual geramos a nova população, realizamos cruzamento e mutações
         pop = self.pop_inicial()
-        self.elite, self.melhor = self.get_elite(pop)
+        self.elite, self.melhor = self.get_elite(pop, 1)
         print("Distância Inicial: ", self.melhor)
 
         for i in range(0, self.ngeneration):
             new_pop = []
+
             for j in range(0, int(len(pop)/2)):
                 ind1 = deepcopy(self.torneio(pop))
                 ind2 = deepcopy(self.torneio(pop))
@@ -75,7 +76,7 @@ class ga:
             new_pop.sort(key=lambda x: x.dist, reverse=True)
             for k in range(0,self.n_elitismo):
                 new_pop[k] = pop[k]
-            self.elite, self.melhor = self.get_elite(new_pop)
+            self.elite, self.melhor = self.get_elite(new_pop, i)
             pop = new_pop
         
     def torneio(self, pop):
@@ -99,10 +100,11 @@ class ga:
         for i in range(0,self.n_elitismo):
             newpop[i] = pop[i]
 
-    def get_elite(self, pop):
+    def get_elite(self, pop, i):
         #Função que coleta o melhor fitness da atual geração
         pop.sort(key=lambda x: x.dist, reverse=True)
         self.curva.append(pop[-1].dist)
+        print(f'Geração {i}: {pop[-1].dist}')
         return pop[-1].ind, pop[-1].dist
 
     def crossover(self, pai1:individuo, pai2:individuo):
@@ -126,44 +128,76 @@ class ga:
             print(i)
 
 
+
+nomeArquivo = './dados/berlin52/berlin52.tsp'
+
 #Lê a base de dados
-dados = pd.read_csv('./dados/berlin52.tsp', sep='\s', skiprows=6,
-                    skipfooter=2, header=None, index_col=None, engine='python')
+dados = pd.read_csv(nomeArquivo, sep='\s', skiprows=6, skipfooter=2, header=None, index_col=None, engine='python')
 
-dados.rename({0: 'cidade', 1: 'coordenada_x',
-             2: 'coordenada_y'}, axis=1, inplace=True)
-
+dados.rename({0: 'cidade', 1: 'coordenada_x', 2: 'coordenada_y'}, axis=1, inplace=True)
 
 dados.set_index('cidade', inplace=True)
 
 #Armazena a base de dados em um dicionário
 base = {}
 for i, row in dados.iterrows():
+
     base[i] = (row['coordenada_x'], row['coordenada_y'])
 
+
 #Iniciar o Algoritmo Genético
-GA = ga(popsize=200, ngeneration=500, df=base, ntoneio=5, taxa_cruzamento=0.85, taxa_mutacao=0.005, n_elitismo=5)
+GA = ga(popsize=150, ngeneration=20, df=base, ntoneio=5, taxa_cruzamento=0.85, taxa_mutacao=0.005, n_elitismo=3)
 GA.run()
 
 #Variaveis que irão coletar o melhor individuo e o melhor fitness obtido depois das gerações
 ind = GA.elite
 dist = GA.melhor
+
 print("Distância Final: ", dist)
 
 #Plotagem do grafico de convergência e da melhor rota
-f, ax = plt.subplots(figsize=(12, 12))
-ax.scatter(dados['coordenada_x'], dados['coordenada_y'])
+f, ax = plt.subplots(figsize=(17, 13))
+
+
+
+ax.scatter(dados['coordenada_x'], dados['coordenada_y'], edgecolors='black', s=100, c='blue', label='Cidades')
+
+ax.scatter(base[ind[0]][0], base[ind[0]][1], edgecolors='black', s=150, c='yellow', label='Cidades inicial')
+ax.scatter(base[ind[1]][0], base[ind[1]][1], s=145, c='red', label='Cidades seguinte', marker='x')
+
 x = []
 y = []
+
 for i in ind:
     x.append(base[i][0])
     y.append(base[i][1])
 x.append(base[ind[0]][0])
 y.append(base[ind[0]][1])
 
-ax.plot(x, y, '-', c='k', label='Melhor Caminho Encontrado')
+ax.plot(x, y, '--', c='black', label='Caminho Percorrido')
+
+nomeArquivo = nomeArquivo.split('/')[-1].split('.')[0]
+nomePlot = f'{nomeArquivo}_caminho.png'
+
+ax.set(xticklabels=[], yticklabels=[])
+ax.legend(loc=2, ncol=2)
+ax.axis('off')
+ax.set_aspect('equal')
+
+plt.savefig(f'./dados/{nomeArquivo}/{nomePlot}')
+
 
 f, ax = plt.subplots(figsize=(12, 12))
+
 ax.plot(GA.curva)
-plt.show()
-plt.savefig('curva.png')
+
+ax.set_title(r'Distância $\times$ gerações')
+
+ax.set(
+    ylabel='Distância',
+    xlabel='Gerações'
+)
+
+ax.ticklabel_format(axis='y', style='sci', scilimits=(3, 3), useMathText=True)
+
+plt.savefig(f'./dados/{nomeArquivo}/curva_convergencia.png')
