@@ -51,11 +51,12 @@ class ga:
     def run(self):
         #Função na qual geramos a nova população, realizamos cruzamento e mutações
         pop = self.pop_inicial()
-        self.elite, self.melhor = self.get_elite(pop)
+        self.elite, self.melhor = self.get_elite(pop, 1)
         print("Distância Inicial: ", self.melhor)
 
         for i in range(0, self.ngeneration):
             new_pop = []
+
             for j in range(0, int(len(pop)/2)):
                 ind1 = deepcopy(self.torneio(pop))
                 ind2 = deepcopy(self.torneio(pop))
@@ -75,7 +76,7 @@ class ga:
             new_pop.sort(key=lambda x: x.dist, reverse=True)
             for k in range(0,self.n_elitismo):
                 new_pop[k] = pop[k]
-            self.elite, self.melhor = self.get_elite(new_pop)
+            self.elite, self.melhor = self.get_elite(new_pop, i)
             pop = new_pop
         
     def torneio(self, pop):
@@ -99,10 +100,11 @@ class ga:
         for i in range(0,self.n_elitismo):
             newpop[i] = pop[i]
 
-    def get_elite(self, pop):
+    def get_elite(self, pop, i):
         #Função que coleta o melhor fitness da atual geração
         pop.sort(key=lambda x: x.dist, reverse=True)
         self.curva.append(pop[-1].dist)
+        print(f'Geração {i}: {pop[-1].dist}')
         return pop[-1].ind, pop[-1].dist
 
     def crossover(self, pai1:individuo, pai2:individuo):
@@ -139,7 +141,9 @@ dados.set_index('cidade', inplace=True)
 #Armazena a base de dados em um dicionário
 base = {}
 for i, row in dados.iterrows():
+
     base[i] = (row['coordenada_x'], row['coordenada_y'])
+
 
 #Iniciar o Algoritmo Genético
 GA = ga(popsize=200, ngeneration=500, df=base, ntoneio=5, taxa_cruzamento=0.85, taxa_mutacao=0.005, n_elitismo=5)
@@ -152,16 +156,21 @@ print("Distância Final: ", dist)
 
 #Plotagem do grafico de convergência e da melhor rota
 f, ax = plt.subplots(figsize=(12, 12))
-ax.scatter(dados['coordenada_x'], dados['coordenada_y'])
+ax.scatter(dados['coordenada_x'], dados['coordenada_y'], edgecolors='black', s=100, c='blue', label='Cidades')
+
+ax.scatter(base[ind[0]][0], base[ind[0]][1], edgecolors='black', s=150, c='yellow', label='Cidades inicial')
+ax.scatter(base[ind[1]][0], base[ind[1]][1], s=145, c='red', label='Cidades seguinte', marker='x')
+
 x = []
 y = []
+
 for i in ind:
     x.append(base[i][0])
     y.append(base[i][1])
 x.append(base[ind[0]][0])
 y.append(base[ind[0]][1])
 
-ax.plot(x, y, '-', c='k', label='Melhor Caminho Encontrado')
+ax.plot(x, y, '--', c='gray', label='Caminho Percorrido')
 
 f, ax = plt.subplots(figsize=(12, 12))
 ax.plot(GA.curva)
